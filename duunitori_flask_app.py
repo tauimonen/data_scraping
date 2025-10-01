@@ -6,76 +6,11 @@ import math
 
 app = Flask(__name__)
 
-# --- template ---
-TEMPLATE = (
-    TEMPLATE
-) = """
-<!DOCTYPE html>
-<html lang="fi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Työpaikat – {{ query }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 2rem; background: #f9f9f9; }
-        h1 { color: #333; }
-        .search-box { margin-bottom: 1.5rem; }
-        input[type=text] {
-            padding: 0.5rem;
-            width: 250px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            margin-right: 0.5rem;
-        }
-        button {
-            padding: 0.5rem 1rem;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .search-info { margin-bottom: 1rem; color: #666; }
-        ul { list-style-type: none; padding: 0; }
-        li { background: #fff; margin: 0.5rem 0; padding: 1rem; border-radius: 8px;
-             box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        a { text-decoration: none; color: #007bff; font-weight: bold; }
-        a:hover { text-decoration: underline; }
-        .company { color: #555; font-size: 0.9em; margin-top: 0.3rem; }
-    </style>
-</head>
-<body>
-    <h1>Työpaikat</h1>
-    
-    <div class="search-box">
-        <form method="get" action="/">
-            <input type="text" name="q" placeholder="Hakusana..." value="{{ query }}">
-            <button type="submit">Hae</button>
-        </form>
-    </div>
-
-    <div class="search-info">
-        Löytyi yhteensä <strong>{{ total_jobs }}</strong> työpaikkaa (näytetään max {{ pages }} sivua).
-    </div>
-    
-    <ul>
-        {% for job in jobs %}
-        <li>
-            <a href="{{ job.link }}" target="_blank">{{ job.text }}</a>
-            <div class="company">{{ job.company }}</div>
-        </li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
-"""
-
-
 # --- helper functions ---
+
+
 def find_results_count(soup) -> int:
+    """Finds the total number of results from a script tag."""
     for script in soup.find_all("script", string=True):
         match = re.search(r'"results_count":\s*"(\d+)"', script.string)
         if match:
@@ -84,10 +19,12 @@ def find_results_count(soup) -> int:
 
 
 def calculate_page_count(result_count: int, items_on_page: int = 20) -> int:
+    """Calculates how many pages are required given items per page."""
     return math.ceil(result_count / items_on_page)
 
 
 def get_jobs_from_page(session, url: str):
+    """Fetches job postings from a single page and returns a list of job elements."""
     resp = session.get(url)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "lxml")
@@ -95,13 +32,60 @@ def get_jobs_from_page(session, url: str):
 
 
 # --- Flask routes ---
+
+TEMPLATE = """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Duunitori jobs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <div class="container py-4">
+      <h1 class="mb-3">Duunitori job search</h1>
+
+      <form method="get" action="/">
+        <div class="input-group mb-3">
+          <input name="q" value="{{ query }}" class="form-control" placeholder="search term">
+          <button class="btn btn-primary" type="submit">Search</button>
+          <a class="btn btn-secondary ms-2" href="{{ url_for('index') }}">Default</a>
+        </div>
+      </form>
+
+      <p>Found <strong>{{ total_jobs }}</strong> jobs across <strong>{{ pages }}</strong> pages.</p>
+
+      <div class="mb-3">
+        <a class="btn btn-outline-primary" href="{{ url_for('index', q=query) }}">Refresh</a>
+      </div>
+
+      {% for job in jobs %}
+      <div class="card mb-2">
+        <div class="card-body">
+          <h5 class="card-title">{{ job.text[:120] }}{% if job.text|length > 120 %}...{% endif %}</h5>
+          <p class="card-text">Company: <strong>{{ job.company }}</strong></p>
+          <a href="{{ job.link }}" class="card-link" target="_blank">Open on Duunitori</a>
+        </div>
+      </div>
+      {% endfor %}
+
+      <footer class="pt-4 text-muted">Created by TAU 2025, Simple scraper + Flask demo. Use responsibly and follow site terms.</footer>
+    </div>
+  </body>
+</html>
+"""
+
+
 @app.route("/")
 def index():
+    """Main page: scrape Duunitori for the given query and show results."""
     query = request.args.get("q", "python")
     base_url = "https://duunitori.fi/tyopaikat"
     query_param = f"?haku={query}"
 
     with requests.Session() as session:
+        # fetch first page to learn total count
         resp = session.get(base_url + query_param)
         try:
             resp.raise_for_status()
@@ -112,6 +96,7 @@ def index():
         total_jobs = find_results_count(soup)
         pages = calculate_page_count(total_jobs)
 
+        # collect jobs from first few pages to avoid very long scrapes
         max_pages_to_scrape = min(pages, 5)
         jobs_out = []
 
@@ -131,4 +116,5 @@ def index():
 
 
 if __name__ == "__main__":
+    # Run the app on localhost:5000
     app.run(debug=True)

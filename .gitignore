@@ -1,11 +1,50 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+*.pyo
+*.pyd
+*.pdb
+*.egg-info
+*.egg
 build/
 dist/
 wheels/
-*.egg-info
 
 # Virtual environments
-.venv
+.venv/
+venv/
+env/
+ENV/
+*.env
+.env.*
 
+# Flask / Django / general configs
+instance/
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+*.pid
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*~
+.project
+.pydevproject
+
+# Testing / Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
