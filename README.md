@@ -35,7 +35,7 @@ The app fetches the total number of results, calculates the number of pages, and
    
 2. Create a virtual environment and install dependencies:
 
-  ```bash
+   ```bash
   python -m venv .venv
   source .venv/bin/activate   # Linux/macOS
   .venv\Scripts\activate      # Windows
@@ -51,7 +51,7 @@ The app fetches the total number of results, calculates the number of pages, and
 
 3. Run the application:
   ```bash
-   python app.py
+   python duunitori_flask_app.py
 ```
 4. Open your browser at:
    http://127.0.0.1:5000
